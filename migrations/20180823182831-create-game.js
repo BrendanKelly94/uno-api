@@ -9,12 +9,14 @@ module.exports = {
         type: Sequelize.INTEGER
       },
       has_started: {
-        type: Sequelize.STRING,
-        allowNull: false
+        type: Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: Sequelize.literal(false)
       },
       direction:{
         type: Sequelize.BOOLEAN,
-        allowNull: false
+        allowNull: false,
+        defaultValue: Sequelize.literal(false)
       },
       turn_id:{
         type: Sequelize.INTEGER,
@@ -25,14 +27,6 @@ module.exports = {
         type: Sequelize.INTEGER,
         allowNull: false,
         defaultValue: Sequelize.literal(1)
-      },
-      createdAt: {
-        allowNull: false,
-        type: Sequelize.DATE
-      },
-      updatedAt: {
-        allowNull: false,
-        type: Sequelize.DATE
       }
     });
   },

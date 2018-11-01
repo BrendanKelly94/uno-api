@@ -41,18 +41,12 @@ module.exports = {
       is_in_play: {
         allowNull: false,
         type: Sequelize.BOOLEAN,
+        defaultValue: Sequelize.literal(false)
       },
       is_available: {
         allowNull: false,
-        type: Sequelize.BOOLEAN
-      },
-      createdAt: {
-        allowNull: false,
-        type: Sequelize.DATE
-      },
-      updatedAt: {
-        allowNull: false,
-        type: Sequelize.DATE
+        type: Sequelize.BOOLEAN,
+        defaultValue: Sequelize.literal(false)
       }
     });
   },

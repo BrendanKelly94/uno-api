@@ -1,8 +1,8 @@
 {
   "development": {
     "username": "brendan",
-    "password": "November16",
-    "database": "unodev",
+    "password": "Brendan1",
+    "database": "uno",
     "host": "127.0.0.1",
     "port": "5432",
     "dialect": "postgres"
