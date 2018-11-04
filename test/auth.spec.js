@@ -22,7 +22,7 @@ describe('Authentication Routes', _ => {
   })
 
   describe('Registration', () => {
-    it('should register a new account', (done) => {
+    it('should be able to register a new account', (done) => {
       chai.request(server)
       .post('/register')
       .send({name: 'test', pwd: 'test'})

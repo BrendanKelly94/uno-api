@@ -5,8 +5,8 @@ exports.seed = function(knex, Promise) {
     .then(function () {
       // Inserts seed entries
       return knex('Games').insert([
-        {bot_fill: false},
-        {bot_fill: false}
+        {bot_fill: false, player_count: 3},
+        {bot_fill: true, player_count: 6}
       ]);
     });
 };

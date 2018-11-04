@@ -58,11 +58,12 @@ const setHost = async (name) => {
          .update('is_host', true)
 }
 
-const setTurn = (gameId, playerId) => {
+const setTurn = async (gameId, playerId) => {
   return knex('Games')
          .where('id', gameId)
          .update('turn_id', playerId);
 }
+
 
 
 //Players
@@ -117,6 +118,12 @@ const getPlayers = (gameId) => {
 
 }
 
+const getPlayer = (id) => {
+  return knex('Players')
+         .where('id', id)
+         .select();
+}
+
 const findPlayer = (name) => {
   return knex('Players')
          .where({user_name: name})
@@ -138,7 +145,7 @@ const getHand = (id) => {
          .select();
 }
 
-const setCardInPlay = async (gameId) => {
+const setFirstCardInPlay = async (gameId) => {
   try{
     const deck = await getDeck(gameId);
     let found = false;
@@ -159,24 +166,68 @@ const setCardInPlay = async (gameId) => {
   }
 }
 
-const getCardInPlay = () => {
+const setCardInPlay = async (gameId, playerId, card) => {
+  try{
+    const x = await removeCardInPlay(gameId);
+  }catch(e){
+    throw new Error(e);
+  }
   return knex('GameCards')
-         .where('is_in_play', true)
-         .insert();
+         .where({
+           game_id: gameId,
+           player_id: playerId,
+           value: card.value,
+           color: card.color,
+         })
+         .update({
+           is_available: false,
+         })
+}
+
+const removeCardInPlay = async (gameId) => {
+  return knex('GameCards')
+         .where({
+           game_id: gameId,
+           is_in_play: true
+         })
+         .update({
+           is_in_play: false,
+           is_available: true
+         });
+}
+
+const getCardInPlay = (gameId) => {
+  return knex('GameCards')
+         .where({
+           is_in_play: true,
+           game_id: gameId
+         })
+         .select();
 }
 
 const generateDeck = async (id) => {
   const cards = [];
   const colors = ['red', 'blue', 'yellow', 'green'];
   let colorI = 0;
-  for(let i = 0; i < 52; i++){
+  let val;
+  for(let i = 0; i < 4; i++){
+    cards.push({
+      game_id: id,
+      color: colors[i],
+      value: 0,
+      is_in_play: false,
+      is_available: true
+    })
+  }
+  for(let i = 0; i < 104; i++){
     if(i % 13 === 0 && i !== 0 ){
-      colorI++;
+      colorI = (colorI + 1) % 4;
     }
+    val = (i % 13) + 1;
     cards.push({
       game_id: id,
       color: colors[colorI],
-      value: (i % 13) + 1,
+      value: (val === 13 && i > 52)? 14: val,
       is_in_play: false,
       is_available: true
     })
@@ -208,6 +259,137 @@ const generateHand = async (gameId, playerId) => {
   }
 }
 
+
+//submit turn queries
+
+
+const getNextTurn = async(gameId, currentTurn, isSkip) => {
+  try{
+    const game = await queries.findGame(gameId);
+    const players = await queries.getPlayers(gameId);
+    const currIndex = players.findIndex(item => item.id === currentTurn);
+    let nextTurn;
+    if(isSkip){
+      if(game[0].direction){
+        nextTurn = players[(tIndex + 2) % players.length];
+      }else{
+        nextTurn = players[(tIndex - 2 + players.length) % players.length]
+      }
+    }else{
+      if(game[0].direction){
+        nextTurn = players[(tIndex + 1) % players.length];
+      }else{
+        nextTurn = players[(tIndex - 1 + players.length) % players.length]
+      }
+    }
+    return nextTurn;
+  }catch(e){
+    throw new Error(e);
+  }
+}
+
+const nextTurn = async (gameId, isSkip) => {
+  try{
+    const game = await findGame(gameId)
+    const nTurn = await getNextTurn(gameId, game[0].turn_id, isSkip);
+    const x = await setTurn(gameId, nTurn.id);
+    return nTurn.id;
+  }catch(e){
+    throw new Error(e);
+  }
+}
+
+
+const setDirection = async (gameId) => {
+  let lastDirection;
+  try{
+    const game = findGame(gameId);
+    lastDirection = game[0].direction
+  }catch(e){
+    throw new Error(e);
+  }
+  return knex('Games')
+         .where('id', gameId)
+         .update({
+           direction: !lastDirection
+         });
+}
+
+const giveCards = async (gameId, num) => {
+  try{
+    const deck = await getDeck(gameId);
+    const game = await findGame(gameId);
+    let random;
+    let cards = [];
+    //generate cards to give
+    while(cards.length !== num){
+      random = deck[Math.floor(Math.random() * 52)];
+      if(random.is_available){
+        cards.push(random.id);
+        random.is_available = false;
+      }
+    }
+    //find who to give it to
+    // let target = game[0].turn_id
+    // do{
+    //   const nextTurn = await getNextTurn(gameId, target, false);
+    //   const nextHand = await getHand(nextTurn.id);
+    //   let filterHand = nextHand.filter(item => cardFilter(item));
+    //   if(filterHand.length > 0) target = nextTurn.id
+    // }while(filterHand.length > 0);
+
+
+    return knex('GameCards')
+           .whereIn('id', cards)
+           .update({
+             player_id: nextTurn.id
+           });
+
+  }catch(e){
+    throw new Error(e);
+  }
+}
+
+const cardFilter = (item) => {
+    if(num === 2){
+      if(item.value === 13){
+        return true;
+      }else{
+        return false;
+      }
+    }else{
+      if(item.value === 13){
+        return true;
+      }else{
+        return false;
+      }
+    }
+}
+
+const drawCard = async (gameId, playerId) => {
+  try{
+    const deck = await getDeck(gameId);
+    let found = false;
+    let random;
+    while(!found){
+      random = deck[Math.floor(Math.random() * 52)];
+      if(random.is_available){
+        found = true;
+      }
+    }
+    return knex('GameCards')
+           .where('id', random.id)
+           .update({
+             player_id: playerId
+           });
+
+  }catch(e){
+    throw new Error(e);
+  }
+}
+
+
+
 module.exports = {
   addUser: addUser,
   getUsers: getUsers,
@@ -222,10 +404,12 @@ module.exports = {
   updatePlayerCount: updatePlayerCount,
   replacePlayer: replacePlayer,
   getPlayers: getPlayers,
+  getPlayer: getPlayer,
   findPlayer: findPlayer,
   getDeck: getDeck,
   getHand: getHand,
-  setCardInPlay: setCardInPlay,
+  setFirstCardInPlay: setFirstCardInPlay,
+
   getCardInPlay: getCardInPlay,
   generateDeck: generateDeck,
   generateHand: generateHand

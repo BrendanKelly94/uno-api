@@ -4,7 +4,7 @@ exports.up = function(knex, Promise) {
     table.increments('id').primary();
     table.integer('game_id').references('id').inTable('Games').notNull().onDelete('cascade');
     table.string('user_name').references('name').inTable('Users').notNull();
-    table.string('is_host').notNull().defaultTo(false);
+    table.boolean('is_host').notNull().defaultTo(false);
     table.boolean('is_bot').notNullable();
   });
 };
