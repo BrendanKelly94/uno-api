@@ -119,7 +119,8 @@ router.post('/game/:id/submitCard/:playerId', async (req, res, next) => {
   const card = req.body.card;
   try{
     const nextTurnId = await submitCard(gameId, playerId, card);
-    gameIo.to(gameId).emit('newTurn', nextTurnId)
+    res.send({id: nextTurnId});
+    gameIo.to(gameId).emit('newTurn', {currTurn: nextTurnId, lastTurn: playerId})
   }catch(e){
     res.send({err: e});
   }
@@ -130,41 +131,51 @@ const submitCard = async (gameId, playerId, card) => {
   try{
     if(card.value > 9){
       switch(card.value){
-        case 10:
-          await queries.setDirection();
+        case 10: //switch direction
+          await queries.flipDirection(gameId);
           await queries.setCardInPlay(gameId, playerId, card)
           nextTurn = await queries.nextTurn(gameId, false);
           break;
-        case 11:
+        case 11: //skip
           await queries.setCardInPlay(gameId, playerId, card);
           nextTurn = await queries.nextTurn(gameId, true)
           break;
-        case 12:
-          await queries.setCardInPlay(gameId, playerId, card)
-          nextTurn = await queries.nextTurn(gameId,false);
-          break;
-        case 13:
-          await queries.giveCards(2);
+        case 12: //give 2
+          await queries.giveCards(gameId, 2);
           await queries.setCardInPlay(gameId, playerId, card)
           nextTurn = await queries.nextTurn(gameId, false);
           break;
-        case 14:
-          await queries.giveCards(4);
+        case 13: // wild card
+          //color selection will happen on front end
+          await queries.setCardInPlay(gameId, playerId, card)
+          nextTurn = await queries.nextTurn(gameId,false);
+          break;
+        case 14: // wild card give 4
+          await queries.giveCards(gameId, 4);
           await queries.setCardInPlay(gameId, playerId, card)
           nextTurn = await queries.nextTurn(gameId, false);
           break;
       }
-      return nextTurn.id;
+      return nextTurn;
 
     }else if(card.value === -1){
-      const card = await queries.drawCard();
-      submitCard(card);
+      const drawCardId = await queries.drawCard(gameId, playerId);
+      const drawCard = await queries.getCard(drawCardId[0]);
+      const newOptions = await getCardOptions(gameId, playerId);
+      const i = newOptions.findIndex(x => x.id === drawCardId[0])
+      if(i != -1){
+        submitCard(drawCard[0]);
+      }else{
+        nextTurn = await queries.nextTurn(gameId, false);
+        return nextTurn;
+      }
     }else{
-      const x = await queries.setCardInPlay(gameId, playerId, card)
-      nextTurn = await nextTurn(gameId, false);
+      await queries.setCardInPlay(gameId, playerId, card)
+      nextTurn = await queries.nextTurn(gameId, false);
       return nextTurn;
     }
   }catch(e){
+    console.log(e)
     throw new Error(e);
   }
 
@@ -175,7 +186,7 @@ const getCardOptions = async (gameId, playerId) =>{
     const cardInPlay = await queries.getCardInPlay(gameId);
     const hand = await queries.getHand(playerId);
     const options = hand.filter(card => {
-      if(card.value > 11){
+      if(card.value > 12){
         return true;
       }else if(card.color === cardInPlay[0].color){
         return true;

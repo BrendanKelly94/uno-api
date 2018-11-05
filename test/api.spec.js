@@ -246,206 +246,150 @@ describe('API Routes', _ => {
   // //
   //
   //
-  //
-  // describe('api/game/:gameId/submitCard/:playerId', _ => {
-  //
-  //   beforeEach(async () => {
-  //     try{
-  //       await knex.migrate.rollback();
-  //       await knex.migrate.latest();
-  //       await knex.seed.run();
-  //     }catch(e){
-  //       console.log(e)
-  //     }
-  //   })
-  //
-  //   describe('if special card', _ => {
-  //     const gameId = 1;
-  //     const socket = io.connect(socketUrl, options);
-  //     socket.emit('join', {gameId: gameId});
-  //
-  //     it('will reverse direction', async (done) => {
-  //       let turnId;
-  //       let lastDirection;
-  //       try{
-  //         const game = await queries.findGame(gameId);
-  //         turnId = game[0].turn_id;
-  //         lastDirection = game[0].direction;
-  //       }catch(e){
-  //         console.log(e);
-  //       }
-  //       chai.request(server)
-  //       .post(`api/game/${gameId}/submitCard/${turnId}`)
-  //       .send({card: {value: 10, color: 'red'}})
-  //       .end(async (err, res) => {
-  //         let game;
-  //         try{
-  //           game = await queries.findGame(gameId);
-  //         }catch(e){
-  //           console.log(e);
-  //         }
-  //         game[0].direction.should.equal(!lastDirection)
-  //         res.should.have.status(200);
-  //       })
-  //     });
-  //     it('will skip turn', async (done) => {
-  //       const gameId = 1;
-  //       let turnId, direction;
-  //       try{
-  //         const game = await queries.findGame(gameId);
-  //         turnId = game[0].turn_id;
-  //         direction = game[0].direction;
-  //       }catch(e){
-  //         console.log(e);
-  //       }
-  //       chai.request(server)
-  //       .post(`api/game/${gameId}/submitCard/${turnId}`)
-  //       .send({value: 11, color: 'red'})
-  //       .end(async (err, res) => {
-  //         let players, tIndex, nextTurn, currrentTurn;
-  //         try{
-  //           const game = await queries.findGame(gameId);
-  //           currentTurn = game[0].turn_id;
-  //           players = await queries.getPlayers(gameId);
-  //           tIndex = players.findIndex(item => item.turn_id === turnId);
-  //           if(direction){
-  //             nextTurn = players[(tIndex + 2) % players.length];
-  //           }else{
-  //             nextTurn = players[(tIndex - 2 + players.length) % players.length];
-  //           }
-  //         }catch(e){
-  //           console.log(e);
-  //         }
-  //         res.should.have.status(200);
-  //         currentTurn.should.equal(nextTurn);
-  //         done();
-  //       })
-  //     });
-  //     it('will change color', async (done) => {
-  //       let turnId;
-  //       try{
-  //         const game = await queries.findGame(gameId);
-  //         turnId = game[0].turn_id;
-  //       }catch(e){
-  //         console.log(e);
-  //       }
-  //       chai.request(server)
-  //       .post(`api/game/${gameId}/submitCard/${turnId}`)
-  //       .send({value: 12, color: 'blue'})
-  //       .end(async (err, res) => {
-  //         let cardInPlay;
-  //         try{
-  //           cardInPlay = queries.getCardInPlay(gameId);
-  //         }catch(e){
-  //           console.log(e);
-  //         }
-  //         res.should.have.status(200);
-  //         cardInPlay[0].value.should.equal(12);
-  //         done();
-  //       })
-  //     });
-  //     it('will give 2 cards', async (done) => {
-  //       let turnId, numOfCards, nextTurn;
-  //       try{
-  //         const game = await queries.findGame();
-  //         const players = await getPlayers();
-  //         turnId = game[0].turn_id; //current turn
-  //         const tIndex = players.findIndex(item => item.turn_id === turnId); //id of next turn
-  //         if(game[0].direction){
-  //           nextTurn = players[(tIndex + 1) % players.length];
-  //         }else{
-  //           nextTurn = players[(tIndex - 1 + players.length) % players.length]
-  //         }
-  //         const hand = await queries.getHand(nextTurn.id);
-  //         numOfCards = hand.length;
-  //       }catch(e){
-  //         console.log(i);
-  //       }
-  //       chai.request(server)
-  //       .post(`api/game/${gameId}/getHandOptions/${turnId}`)
-  //       .send({value: 13, color: 'blue'})
-  //       .end(async (err, res) => {
-  //         let newNumOfCards;
-  //         try{
-  //           const game = await queries.findGame(gameId);
-  //           const hand = await queries.getHand(nextTurn.id);
-  //           newNumOfCards = hand.length;
-  //         }catch(e){
-  //           console.log(e);
-  //         }
-  //         newNumOfCards.should.equal(numOfCards + 2);
-  //         res.should.have.status(200);
-  //         done();
-  //       })
-  //     });
-  //     it('will give 4 cards', async (done) => {
-  //       let turnId, numOfCards, nextTurn;
-  //       try{
-  //         const game = await queries.findGame();
-  //         const players = await getPlayers();
-  //         turnId = game[0].turn_id; //current turn
-  //         nextTurn = await queries.getNextTurn();
-  //         const hand = await queries.getHand(nextTurn.id);
-  //         numOfCards = hand.length;
-  //       }catch(e){
-  //         console.log(i);
-  //       }
-  //       chai.request(server)
-  //       .post(`api/game/${gameId}/getHandOptions/${turnId}`)
-  //       .send({value: 14, color: 'red'})
-  //       .end(async (err, res) => {
-  //         let newNumOfCards;
-  //         try{
-  //           const game = await queries.findGame(gameId);
-  //           const hand = await queries.getHand(nextTurn.id);
-  //           newNumOfCards = hand.length;
-  //         }catch(e){
-  //           console.log(e);
-  //         }
-  //         newNumOfCards.should.equal(numOfCards + 4);
-  //         res.should.have.status(200);
-  //         done();
-  //       })
-  //     });
-  //   });
-  //
-  //   // it('will update card in play', (done) => {
-  //   //   chai.request(server)
-  //   //   .post(`api/game/2/getHandOptions/6`)
-  //   //   .end((err, res) => {
-  //   //     res.should.have.status(200);
-  //   //   })
-  //   // });
-  //
-  //   describe('if no card options', _ => {
-  //     const gameId = 1;
-  //     it('will draw a card for player', async (done) => {
-  //       let turnId, oldCardCount;
-  //       try{
-  //         const game = await queries.findGame();
-  //         turnId = game[0].turn_id; //current turn
-  //         const hand = await queries.getHand(turnId)
-  //         oldCardCount = hand.length;
-  //       }catch(e){
-  //         console.log(e);
-  //       }
-  //       chai.request(server)
-  //       .post(`api/game/${gameId}/getHandOptions/${turnId}`)
-  //       .send({value: -1})
-  //       .end(async (err, res) => {
-  //         let cardCount;
-  //         try{
-  //             const hand = queries.getHand(turnId);
-  //             cardCount = hand.length;
-  //         }catch(e){
-  //           console.log(e)
-  //         }
-  //         cardCount.should.equal(oldCardCount + 1)
-  //         res.should.have.status(200);
-  //       })
-  //     });
-  //   });
-  // });
+
+  describe('/api/game/:gameId/submitCard/:playerId', _ => {
+    const gameId = 1;
+
+    beforeEach(async () => {
+      try{
+        await knex.migrate.rollback();
+        await knex.migrate.latest();
+        await knex.seed.run();
+      }catch(e){
+        console.log(e)
+      }
+    })
+
+    describe('if special card', _ => {
+
+
+      it('will reverse direction', asyncHOF(async () => {
+
+        let game = await queries.findGame(gameId);
+        const turnId = game[0].turn_id;
+        const lastDirection = game[0].direction;
+
+        const res = await chai.request(server)
+        .post(`/api/game/${gameId}/submitCard/${turnId}`)
+        .send({card: {value: 10, color: 'red'}})
+
+        game = await queries.findGame(gameId);
+        game[0].direction.should.equal(!lastDirection)
+        res.should.have.status(200);
+      }));
+
+      it('will skip turn', asyncHOF(async () => {
+        let game = await queries.findGame(gameId);
+        const turnId = game[0].turn_id;
+
+        const res = await chai.request(server)
+        .post(`/api/game/${gameId}/submitCard/${turnId}`)
+        .send({card: {value: 11, color: 'red'}})
+
+        game = await queries.findGame(gameId);
+        const currentTurn = game[0].turn_id;
+        const nextTurn = await queries.getNextTurn(gameId, turnId, true);
+        res.should.have.status(200);
+        currentTurn.should.equal(nextTurn.id);
+      }));
+
+
+      it('will give 2 cards', asyncHOF(async () => {
+        let game = await queries.findGame(gameId);
+        const turnId = game[0].turn_id; //current turn
+        const playerHand = await queries.getHand(turnId);
+        const give2Card = playerHand.filter(card => {
+          if(card.value === 12){
+            return true;
+          }else{
+            return false;
+          }
+        })
+        const nextTurn = await queries.getNextTurn(gameId, turnId, false);
+        let hand = await queries.getHand(nextTurn.id);
+        const numOfCards = hand.length;
+
+        const res = await chai.request(server)
+        .post(`/api/game/${gameId}/submitCard/${turnId}`)
+        .send({card: give2Card[0]});
+        game = await queries.findGame(gameId);
+        hand = await queries.getHand(nextTurn.id);
+        const newNumOfCards = hand.length;
+        newNumOfCards.should.equal(numOfCards + 2);
+        res.should.have.status(200);
+      }));
+
+      it('will change color', asyncHOF(async () => {
+        const game = await queries.findGame(gameId);
+        const turnId = game[0].turn_id;
+        const hand = await queries.getHand(turnId);
+        const skipCard = hand.filter(card => {
+          if(card.value === 13){
+            return true;
+          }else{
+            return false;
+          }
+        })
+        const res = await chai.request(server)
+        .post(`/api/game/${gameId}/submitCard/${turnId}`)
+        .send({card: skipCard[0]})
+
+        const cardInPlay = await queries.getCardInPlay(gameId);
+        res.should.have.status(200);
+        cardInPlay[0].value.should.equal(13);
+      }));
+
+
+      it('will give 4 cards', asyncHOF(async () => {
+        let game = await queries.findGame(gameId);
+        const turnId = game[0].turn_id; //current turn
+        const playerHand = await queries.getHand(turnId);
+        const give4Card = playerHand.filter(card => {
+          if(card.value === 14){
+            return true;
+          }else{
+            return false;
+          }
+        })
+        const nextTurn = await queries.getNextTurn(gameId, turnId, false);
+        let hand = await queries.getHand(nextTurn.id);
+        const numOfCards = hand.length;
+
+        const res = await chai.request(server)
+        .post(`/api/game/${gameId}/submitCard/${turnId}`)
+        .send({card: give4Card[0]})
+
+        game = await queries.findGame(gameId);
+        hand = await queries.getHand(nextTurn.id);
+        const newNumOfCards = hand.length;
+        newNumOfCards.should.equal(numOfCards + 4);
+        res.should.have.status(200);
+      }));
+    });
+
+
+
+    describe('if no card options', _ => {
+      it('will draw a card for player', asyncHOF(async () => {
+
+        const game = await queries.findGame(gameId);
+        const turnId = game[0].turn_id; //current turn
+        let hand = await queries.getHand(turnId)
+        const oldCardCount = hand.length;
+
+        const res = await chai.request(server)
+        .post(`/api/game/${gameId}/submitCard/${turnId}`)
+        .send({card: {value: -1}})
+
+        hand = await queries.getHand(turnId);
+        const cardCount = hand.length;
+        cardCount.should.equal(oldCardCount + 1)
+        res.should.have.status(200);
+
+      }));
+
+    });
+  });
 
 
 
