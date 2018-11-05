@@ -4,9 +4,9 @@ This project is an API for mulitplayer UNO that will be utilized by a future fro
 
 This API was built using:
 
-*Node + Express
-*Async/Await (cleaner async code)
-*SocketIO (communication between server and clients)
-*PostgreSQL (database)
-*Knex (database migrations and query building)
-*Mocha + Chai (testing and assertions)
+* Node + Express
+* Async/Await (cleaner async code)
+* SocketIO (communication between server and clients)
+* PostgreSQL (database)
+* Knex (database migrations and query building)
+* Mocha + Chai (testing and assertions)
