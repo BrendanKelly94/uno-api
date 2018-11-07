@@ -1,4 +1,5 @@
 const bcrypt = require('bcrypt');
+const queries = require('../db/queries')
 
 //name all passwords test for simplicity when testing
 const users = [
@@ -14,21 +15,16 @@ const users = [
 ]
 exports.seed = function(knex, Promise) {
   // Deletes ALL existing entries
-  return knex('Users').del()
-    .then(async () => {
-      // Inserts seed entries
-      users.map(user => {
-        bcrypt.hash(user.pwd, 1, (err, hash) => {
-          user.pwd = hash;
-        })
-      })
+  // Deletes ALL existing entries
+   return knex('Users').del()
+     .then(async () => {
+       // Inserts seed entries
+       // users.map(user => {
+       //   bcrypt.hash(user.pwd, 1, async (err, hash) => {
+       //     await queries.addUser({name: user.name, pwd: hash})
+       //   })
+       // })
 
-      try{
-        return await knex('Users').insert(users);
-      }catch(e){
-        console.log(e);
-      }
-
-
-    });
+       return knex('Users').insert(users);
+     });
 };

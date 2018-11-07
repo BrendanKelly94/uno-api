@@ -2,15 +2,17 @@ const knex = require('./knex.js');
 
 //Users
 
-const addUser = async (name, pwd) => {
-  return knex('Users').insert({name: name, pwd: pwd});
+const addUser = async ({name, pwd}) => {
+  return knex('Users')
+         .insert({name: name, pwd: pwd})
+         .returning('name')
 }
 
 const getUsers = () => {
     return knex('Users').select();
 }
 
-const findUser = (name) => {
+const findUser = ({name}) => {
     return knex('Users').where({name: name}).select();
 }
 
@@ -21,19 +23,19 @@ const getGames = () => {
   return knex('Games').select();
 }
 
-const findGame = (id) => {
+const findGame = ({gameId}) => {
   return knex('Games')
-         .where('id', id)
+         .where('id', gameId)
          .select();
 }
 
-const createGame = async (botFill) => {
+const createGame = async ({botFill}) => {
     return knex('Games')
     .insert({bot_fill: botFill})
     .returning('id')
 }
 
-const fillBots = async (gameId) => {
+const fillBots = async ({gameId}) => {
   const players = [
     {game_id: gameId, user_name: 'bot', is_bot: 'true', is_host: 'false'},
     {game_id: gameId, user_name: 'bot', is_bot: 'true', is_host: 'false'},
@@ -43,38 +45,41 @@ const fillBots = async (gameId) => {
     {game_id: gameId, user_name: 'bot', is_bot: 'true', is_host: 'false'}
   ];
   try{
-    const x = await updatePlayerCount(gameId, 6);
+    const x = await updatePlayerCount({gameId: gameId, num: 6});
   }catch(e){
     console.log(e);
   }
   return knex('Players')
          .where('game_id', gameId)
-         .insert(players);
+         .insert(players)
+         .returning('id');
 }
 
-const setHost = async (name) => {
+const setHost = async ({name}) => {
   return knex('Players')
          .where('user_name', name)
          .update('is_host', true)
+         .returning('id')
 }
 
-const setTurn = async (gameId, playerId) => {
+const setTurn = async ({gameId, playerId}) => {
   return knex('Games')
          .where('id', gameId)
-         .update({turn_id: playerId});
+         .update({turn_id: playerId})
+         .returning('turn_id')
 }
 
 
 
 //Players
 
-const addPlayer = async (gameId, name) => {
+const addPlayer = async ({gameId, name}) => {
   let game;
   try{
-    game = await findGame(gameId);
-    const x = await updatePlayerCount(gameId, 1)
+    game = await findGame({gameId: gameId});
+    const x = await updatePlayerCount({gameId: gameId, num: 1})
   }catch(e){
-    console.log(e)
+    throw new Error(e);
   }
 
   return knex('Players')
@@ -87,10 +92,10 @@ const addPlayer = async (gameId, name) => {
          .returning('id')
 }
 
-const updatePlayerCount = async (gameId, num) => {
+const updatePlayerCount = async ({gameId, num}) => {
     let game;
     try{
-      game = await findGame(gameId);
+      game = await findGame({gameId: gameId});
     }catch(e){
       console.log(e);
     }
@@ -99,18 +104,20 @@ const updatePlayerCount = async (gameId, num) => {
            .update({
              player_count: game[0].player_count + num
            })
+           .returning('id')
 }
 
-const replacePlayer = async (id, name) => {
+const replacePlayer = async ({playerId, name}) => {
   return knex('Players')
-         .where('id', id)
+         .where('id', playerId)
          .update({
            user_name: name,
            is_bot: (name === 'bot')? true: false,
          })
+         .returning('user_name')
 }
 
-const getPlayers = (gameId) => {
+const getPlayers = ({gameId}) => {
   return knex('Players')
          .where('game_id', gameId)
          .orderBy('id', 'asc')
@@ -118,13 +125,13 @@ const getPlayers = (gameId) => {
 
 }
 
-const getPlayer = (id) => {
+const getPlayer = ({playerId}) => {
   return knex('Players')
-         .where('id', id)
+         .where('id', playerId)
          .select();
 }
 
-const findPlayer = (name) => {
+const findPlayer = ({name}) => {
   return knex('Players')
          .where({user_name: name})
          .select()
@@ -132,27 +139,27 @@ const findPlayer = (name) => {
 
 
 //GameCards
-const getCard = (id) => {
+const getCard = ({cardId}) => {
   return knex('GameCards')
-         .where('id', id)
+         .where('id', cardId)
          .select();
 }
 
-const getDeck = (id) => {
+const getDeck = ({gameId}) => {
   return knex('GameCards')
-         .where({game_id: id})
+         .where({game_id: gameId})
          .select();
 }
 
-const getHand = (playerId) => {
+const getHand = ({playerId}) => {
   return knex('GameCards')
          .where({player_id: playerId})
          .select();
 }
 
-const setFirstCardInPlay = async (gameId) => {
+const setFirstCardInPlay = async ({gameId}) => {
   try{
-    const deck = await getDeck(gameId);
+    const deck = await getDeck({gameId: gameId});
     let found = false;
     let random;
     while(!found){
@@ -164,19 +171,19 @@ const setFirstCardInPlay = async (gameId) => {
            .update({
              is_available: false,
              is_in_play: true
-           });
+           })
+           .returning('id');
 
   }catch(e){
     console.log(e);
   }
 }
 
-const setCardInPlay = async (gameId, playerId, card) => {
+const setCardInPlay = async ({gameId, playerId, card}) => {
   try{
-    const x = await removeCardInPlay(gameId);
+    const x = await removeCardInPlay({gameId: gameId});
     return knex('GameCards')
            .where({
-             game_id: gameId,
              player_id: playerId,
              value: card.value,
              color: card.color
@@ -192,7 +199,7 @@ const setCardInPlay = async (gameId, playerId, card) => {
   }
 }
 
-const removeCardInPlay = async (gameId) => {
+const removeCardInPlay = async ({gameId}) => {
   return knex('GameCards')
          .where({
            game_id: gameId,
@@ -205,7 +212,7 @@ const removeCardInPlay = async (gameId) => {
          .returning('id');
 }
 
-const getCardInPlay = async (gameId) => {
+const getCardInPlay = async ({gameId}) => {
   return knex('GameCards')
          .where({
            is_in_play: true,
@@ -214,14 +221,14 @@ const getCardInPlay = async (gameId) => {
          .select();
 }
 
-const generateDeck = async (id) => {
+const generateDeck = async ({gameId}) => {
   const cards = [];
   const colors = ['red', 'blue', 'yellow', 'green'];
   let colorI = 0;
   let val;
   for(let i = 0; i < 4; i++){
     cards.push({
-      game_id: id,
+      game_id: gameId,
       color: colors[i],
       value: 0,
       is_in_play: false,
@@ -234,19 +241,21 @@ const generateDeck = async (id) => {
     }
     val = (i % 13) + 1;
     cards.push({
-      game_id: id,
+      game_id: gameId,
       color: colors[colorI],
       value: (val === 13 && i > 52)? 14: val,
       is_in_play: false,
       is_available: true
     })
   }
-  return knex('GameCards').insert(cards);
+  return knex('GameCards')
+         .insert(cards)
+         .returning('id');
 }
 
-const generateHand = async (gameId, playerId) => {
+const generateHand = async ({gameId, playerId}) => {
   try{
-    const deck = await getDeck(gameId);
+    const deck = await getDeck({gameId: gameId});
     const hand = [];
     let randomItem;
     while(hand.length !== 7){
@@ -261,7 +270,8 @@ const generateHand = async (gameId, playerId) => {
            .update({
              player_id: playerId,
              is_available: false
-           });
+           })
+           .returning('id');
 
   }catch(e){
     console.log(e);
@@ -272,11 +282,11 @@ const generateHand = async (gameId, playerId) => {
 //submit turn queries
 
 
-const getNextTurn = async(gameId, currentTurn, isSkip) => {
+const getNextTurn = async({gameId, currentTurn, isSkip}) => {
   try{
-    const game = await findGame(gameId);
-    const players = await getPlayers(gameId);
-    const currIndex = players.findIndex(item => item.id === currentTurn);
+    const game = await findGame({gameId: gameId});
+    const players = await getPlayers({gameId: gameId});
+    const currIndex = players.findIndex(player => player.id === currentTurn);
     let nextTurn;
     if(isSkip){
       if(game[0].direction){
@@ -298,11 +308,11 @@ const getNextTurn = async(gameId, currentTurn, isSkip) => {
   }
 }
 
-const nextTurn = async (gameId, isSkip) => {
+const nextTurn = async ({gameId, isSkip}) => {
   try{
-    const game = await findGame(gameId)
-    const nTurn = await getNextTurn(gameId, game[0].turn_id, isSkip);
-    const x = await setTurn(gameId, nTurn.id);
+    const game = await findGame({gameId: gameId})
+    const nTurn = await getNextTurn({gameId:gameId, currentTurn: game[0].turn_id, isSkip: isSkip});
+    await setTurn({gameId: gameId, playerId: nTurn.id});
     return nTurn.id;
   }catch(e){
     throw new Error(e);
@@ -310,26 +320,27 @@ const nextTurn = async (gameId, isSkip) => {
 }
 
 
-const flipDirection = async (gameId) => {
+const flipDirection = async ({gameId}) => {
   try{
-    const game = await findGame(gameId);
+    const game = await findGame({gameId: gameId});
     lastDirection = game[0].direction;
 
     return knex('Games')
           .where('id', gameId)
           .update({
             direction: !lastDirection
-          });
+          })
+          .returning('direction')
 
    }catch(e){
       throw new Error(e);
    }
 }
 
-const giveCards = async (gameId, num) => {
+const giveCards = async ({gameId, num}) => {
   try{
-    const deck = await getDeck(gameId);
-    const game = await findGame(gameId);
+    const deck = await getDeck({gameId: gameId});
+    const game = await findGame({gameId: gameId});
 
     //find who the target is
     // let target = game[0].turn_id
@@ -346,7 +357,7 @@ const giveCards = async (gameId, num) => {
     //
     // const effectiveNum = num + (travel * num)
 
-    const nextTurn = await getNextTurn(gameId, game[0].turn_id, false);
+    const nextTurn = await getNextTurn({gameId: gameId, currentTurn: game[0].turn_id, isSkip: false});
     let random;
     let cards = [];
     //generate cards to give target
@@ -361,7 +372,8 @@ const giveCards = async (gameId, num) => {
            .whereIn('id', cards)
            .update({
              player_id: nextTurn.id
-           });
+           })
+           .returning('id')
 
   }catch(e){
     throw new Error(e);
@@ -384,9 +396,9 @@ const cardFilter = (item) => {
     }
 }
 
-const drawCard = async (gameId, playerId) => {
+const drawCard = async ({gameId, playerId}) => {
   try{
-    const deck = await getDeck(gameId);
+    const deck = await getDeck({gameId: gameId});
     let random;
     while(true){
       random = deck[Math.floor(Math.random() * 108)];
@@ -409,11 +421,11 @@ const drawCard = async (gameId, playerId) => {
 
 //testing
 
-const customHand = async (gameId, playerId) => {
+const customHand = async ({gameId, playerId}) => {
   const custom = [];
-  const deck = await getDeck(gameId);
+  const deck = await getDeck({gameId: gameId});
   const cards = deck.filter(card => {
-    if(card.value > 9){
+    if(card.value > 9 || card.value === 1){
       return true;
     }else{
       return false;
@@ -427,12 +439,21 @@ const customHand = async (gameId, playerId) => {
       }
     }
   }
+
+  for(let i = 0; i < deck.length; i++){
+    if(cards[i].value === 1){
+      custom.push(cards[i].id);
+      break;
+    }
+  }
+
   return knex('GameCards')
          .whereIn('id', custom)
          .update({
            player_id: playerId,
            is_available: false
          })
+         .returning('id')
 }
 
 module.exports = {
@@ -456,6 +477,7 @@ module.exports = {
   getHand: getHand,
   setFirstCardInPlay: setFirstCardInPlay,
   setCardInPlay: setCardInPlay,
+  removeCardInPlay: removeCardInPlay,
   getCardInPlay: getCardInPlay,
   generateDeck: generateDeck,
   generateHand: generateHand,

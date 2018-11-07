@@ -9,7 +9,7 @@ router.post('/', async (req, res, next) => {
   const inputPwd = req.body.pwd;
 
   if(name !== 'bot'){
-    const databasePwd = await queries.findUser(name);
+    const databasePwd = await queries.findUser({name: name});
     bcrypt.compare(inputPwd, databasePwd[0].pwd, (err,result,body) => {
       if(result){
         res.json(name);

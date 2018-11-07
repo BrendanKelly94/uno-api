@@ -64,14 +64,14 @@ describe('API Routes', _ => {
         .post('/api/newGame')
         .send({botFill: true})
 
-        const deck = await queries.getDeck(res.body.id);
+        const deck = await queries.getDeck({gameId: res.body.id});
         deck.should.be.a('array');
         deck.should.have.length(108);
     }));
 
     it('should fill with bots if botfill is set to true', asyncHOF(async () => {
       const gameId = 2;
-      const players = await queries.getPlayers(gameId);
+      const players = await queries.getPlayers({gameId: gameId});
       players.should.have.length(6);
     }))
   });
@@ -115,7 +115,7 @@ describe('API Routes', _ => {
       .post(`/api/game/${gameId}`)
       .send({name: name})
 
-      const player = await queries.findPlayer(name);
+      const player = await queries.findPlayer({name: name});
       res.should.have.status(200);
       player[0].user_name.should.equal(name);
       player[0].game_id.should.equal(gameId);
@@ -128,8 +128,8 @@ describe('API Routes', _ => {
       .post(`/api/game/${gameId}`)
       .send({name: name})
 
-      const player = await queries.findPlayer(name);
-      const game = await queries.findGame(gameId);
+      const player = await queries.findPlayer({name: name});
+      const game = await queries.findGame({gameId: gameId});
       player[0].user_name.should.equal(name);
       player[0].game_id.should.equal(gameId);
       game[0].player_count.should.equal(6);
@@ -143,8 +143,8 @@ describe('API Routes', _ => {
       .post(`/api/game/${gameId}`)
       .send({name: name})
 
-      const player = await queries.findPlayer(name);
-      const hand = await queries.getHand(player[0].id);
+      const player = await queries.findPlayer({name: name});
+      const hand = await queries.getHand({playerId: player[0].id});
       res.should.have.status(200);
       hand.should.be.a('array');
       hand.should.have.length(7);
@@ -189,7 +189,7 @@ describe('API Routes', _ => {
       .post(`/api/game/${gameId}/start`)
       .send({name: name})
 
-      const card = await queries.getCardInPlay(gameId);
+      const card = await queries.getCardInPlay({gameId: gameId});
       card[0].is_in_play.should.equal(true);
 
     }));
@@ -201,7 +201,7 @@ describe('API Routes', _ => {
     const name = 'brendan';
 
     it('will generate a list of possible cards to play for player', asyncHOF(async () => {
-      const player = await queries.findPlayer(name);
+      const player = await queries.findPlayer({name: name});
       const res = await chai.request(server)
       .get(`/api/game/${gameId}/getHandOptions/${player[0].id}`);
 
@@ -209,27 +209,6 @@ describe('API Routes', _ => {
       res.body.should.have.property('options');
     }));
 
-    // it('will submit turn if bot', (done) => {
-    //   const name = 'bot';
-    //   const gameId = 2;
-    //   let player
-    //   try{
-    //     player = await queries.findPlayer(name);
-    //   }
-    //   const socket = io.connect(socketUrl, options);
-    //   socket.emit('join', {gameId: 1});
-    //   socket.on('newTurn', (data) => {
-    //     data.should.have.property('id');
-    //     socket.disconnect();
-    //     done();
-    //   });
-    //   chai.request(server)
-    //   .post(`/api/game/${gameId}/getHandOptions/${player[0].id}`)
-    //   .end((err, res) => {
-    //     res.should.have.status(200);
-    //     res.should.have.property('options');
-    //   })
-    // })
   });
 
   //
@@ -250,22 +229,85 @@ describe('API Routes', _ => {
   describe('/api/game/:gameId/submitCard/:playerId', _ => {
     const gameId = 1;
 
-    beforeEach(async () => {
-      try{
-        await knex.migrate.rollback();
-        await knex.migrate.latest();
-        await knex.seed.run();
-      }catch(e){
-        console.log(e)
-      }
+    describe('if normal card', _ => {
+      beforeEach(async () => {
+        try{
+          await knex.migrate.rollback();
+          await knex.migrate.latest();
+          await knex.seed.run();
+        }catch(e){
+          console.log(e)
+        }
+      })
+
+      it('will set card in play', asyncHOF(async () => {
+        const hand = await queries.getHand({playerId: 1});
+        const reg = hand.filter(card => {
+          if(card.value === 1){
+            return true;
+          }else{
+            return false;
+          }
+        });
+        const res = await chai.request(server)
+        .post(`/api/game/${1}/submitCard/${1}`)
+        .send({card: reg[0]});
+
+        const cardInPlay = await queries.getCardInPlay({gameId: gameId});
+        cardInPlay[0].id.should.equal(reg[0].id);
+
+      }));
+
+      it('will set next turn if clockwise', asyncHOF(async () => {
+        const hand = await queries.getHand({playerId: 1});
+        const reg = hand.filter(card => {
+          if(card.value === 1){
+            return true;
+          }else{
+            return false;
+          }
+        });
+        const res = await chai.request(server)
+        .post(`/api/game/${1}/submitCard/${1}`)
+        .send({card: reg[0]});
+
+        const nextTurn = await queries.getNextTurn({gameId: 1, currentTurn: 1, isSkip: false});
+        nextTurn.id.should.equal(2);
+
+      }));
+
+      it('will set next turn if counter clockwise', asyncHOF(async () => {
+        await queries.flipDirection({gameId: 1})
+        const hand = await queries.getHand({playerId: 1});
+        const reg = hand.filter(card => {
+          if(card.value === 1){
+            return true;
+          }else{
+            return false;
+          }
+        });
+        const res = await chai.request(server)
+        .post(`/api/game/${1}/submitCard/${1}`)
+        .send({card: reg[0]});
+
+        const nextTurn = await queries.getNextTurn({gameId: 1, currentTurn: 1, isSkip: false});
+        nextTurn.id.should.equal(3);
+      }));
     })
 
     describe('if special card', _ => {
-
-
+      beforeEach(async () => {
+        try{
+          await knex.migrate.rollback();
+          await knex.migrate.latest();
+          await knex.seed.run();
+        }catch(e){
+          console.log(e)
+        }
+      })
       it('will reverse direction', asyncHOF(async () => {
 
-        let game = await queries.findGame(gameId);
+        let game = await queries.findGame({gameId: gameId});
         const turnId = game[0].turn_id;
         const lastDirection = game[0].direction;
 
@@ -273,31 +315,42 @@ describe('API Routes', _ => {
         .post(`/api/game/${gameId}/submitCard/${turnId}`)
         .send({card: {value: 10, color: 'red'}})
 
-        game = await queries.findGame(gameId);
+        game = await queries.findGame({gameId: gameId});
         game[0].direction.should.equal(!lastDirection)
         res.should.have.status(200);
       }));
 
       it('will skip turn', asyncHOF(async () => {
-        let game = await queries.findGame(gameId);
-        const turnId = game[0].turn_id;
+        let game = await queries.findGame({gameId: gameId});
+        const hand = await queries.getHand({playerId: 1});
+        const skip = hand.filter(card => {
+          if(card.value === 11){
+            return true;
+          }else{
+            return false;
+          }
+        })
+        const nextTurn = await queries.getNextTurn({
+          gameId: gameId,
+          currentTurn: 1,
+          isSkip: true
+        });
 
         const res = await chai.request(server)
-        .post(`/api/game/${gameId}/submitCard/${turnId}`)
-        .send({card: {value: 11, color: 'red'}})
+        .post(`/api/game/${gameId}/submitCard/${1}`)
+        .send({card: skip[0]})
 
-        game = await queries.findGame(gameId);
+        game = await queries.findGame({gameId: gameId});
         const currentTurn = game[0].turn_id;
-        const nextTurn = await queries.getNextTurn(gameId, turnId, true);
         res.should.have.status(200);
         currentTurn.should.equal(nextTurn.id);
       }));
 
 
       it('will give 2 cards', asyncHOF(async () => {
-        let game = await queries.findGame(gameId);
+        let game = await queries.findGame({gameId: gameId});
         const turnId = game[0].turn_id; //current turn
-        const playerHand = await queries.getHand(turnId);
+        const playerHand = await queries.getHand({playerId: turnId});
         const give2Card = playerHand.filter(card => {
           if(card.value === 12){
             return true;
@@ -305,25 +358,30 @@ describe('API Routes', _ => {
             return false;
           }
         })
-        const nextTurn = await queries.getNextTurn(gameId, turnId, false);
-        let hand = await queries.getHand(nextTurn.id);
+        const nextTurn = await queries.getNextTurn({
+          gameId: gameId,
+          currentTurn: turnId,
+          isSkip: false
+        });
+        let hand = await queries.getHand({playerId: nextTurn.id});
         const numOfCards = hand.length;
 
         const res = await chai.request(server)
         .post(`/api/game/${gameId}/submitCard/${turnId}`)
         .send({card: give2Card[0]});
-        game = await queries.findGame(gameId);
-        hand = await queries.getHand(nextTurn.id);
+
+        game = await queries.findGame({gameId: gameId});
+        hand = await queries.getHand({playerId: nextTurn.id});
         const newNumOfCards = hand.length;
         newNumOfCards.should.equal(numOfCards + 2);
         res.should.have.status(200);
       }));
 
       it('will change color', asyncHOF(async () => {
-        const game = await queries.findGame(gameId);
+        const game = await queries.findGame({gameId: gameId});
         const turnId = game[0].turn_id;
-        const hand = await queries.getHand(turnId);
-        const skipCard = hand.filter(card => {
+        const hand = await queries.getHand({playerId: turnId});
+        const colorCard = hand.filter(card => {
           if(card.value === 13){
             return true;
           }else{
@@ -332,18 +390,18 @@ describe('API Routes', _ => {
         })
         const res = await chai.request(server)
         .post(`/api/game/${gameId}/submitCard/${turnId}`)
-        .send({card: skipCard[0]})
+        .send({card: colorCard[0]})
 
-        const cardInPlay = await queries.getCardInPlay(gameId);
+        const cardInPlay = await queries.getCardInPlay({gameId: gameId});
         res.should.have.status(200);
         cardInPlay[0].value.should.equal(13);
       }));
 
 
       it('will give 4 cards', asyncHOF(async () => {
-        let game = await queries.findGame(gameId);
+        let game = await queries.findGame({gameId: gameId});
         const turnId = game[0].turn_id; //current turn
-        const playerHand = await queries.getHand(turnId);
+        const playerHand = await queries.getHand({playerId: turnId});
         const give4Card = playerHand.filter(card => {
           if(card.value === 14){
             return true;
@@ -351,46 +409,99 @@ describe('API Routes', _ => {
             return false;
           }
         })
-        const nextTurn = await queries.getNextTurn(gameId, turnId, false);
-        let hand = await queries.getHand(nextTurn.id);
+        const nextTurn = await queries.getNextTurn({
+          gameId: gameId,
+          currentTurn: turnId,
+          isSkip: false
+        });
+        let hand = await queries.getHand({playerId: nextTurn.id});
         const numOfCards = hand.length;
 
         const res = await chai.request(server)
         .post(`/api/game/${gameId}/submitCard/${turnId}`)
         .send({card: give4Card[0]})
 
-        game = await queries.findGame(gameId);
-        hand = await queries.getHand(nextTurn.id);
+        game = await queries.findGame({gameId: gameId});
+        hand = await queries.getHand({playerId: nextTurn.id});
         const newNumOfCards = hand.length;
         newNumOfCards.should.equal(numOfCards + 4);
         res.should.have.status(200);
       }));
     });
 
-
-
-    describe('if no card options', _ => {
-      it('will draw a card for player', asyncHOF(async () => {
-
-        const game = await queries.findGame(gameId);
-        const turnId = game[0].turn_id; //current turn
-        let hand = await queries.getHand(turnId)
-        const oldCardCount = hand.length;
+    describe('if next turn is bot', _ => {
+      beforeEach(async () => {
+        try{
+          await knex.migrate.rollback();
+          await knex.migrate.latest();
+          await knex.seed.run();
+        }catch(e){
+          console.log(e)
+        }
+      })
+      it('bot will submitTurn automatically', asyncHOF(async () => {
+        const hand = await queries.getHand({playerId: 4});
+        const reg = hand.filter(card => {
+          if(card.value === 1 ){
+            return true;
+          }else{
+            return false;
+          }
+        });
+        const socket = io.connect(socketUrl, options);
+        socket.emit('join', {gameId: 2});
+        socket.on('newTurn', (data) => {
+          data.should.have.property('currTurn');
+          data.should.have.property('lastTurn');
+          data.should.have.property('card');
+          socket.disconnect();
+        });
 
         const res = await chai.request(server)
-        .post(`/api/game/${gameId}/submitCard/${turnId}`)
-        .send({card: {value: -1}})
+        .post(`/api/game/${2}/submitCard/${4}`)
+        .send({card: reg[0]})
 
-        hand = await queries.getHand(turnId);
-        const cardCount = hand.length;
-        cardCount.should.equal(oldCardCount + 1)
+        res.body.id.should.be.a('number');
+        res.body.id.should.equal(4)
         res.should.have.status(200);
-
       }));
+    })
 
-    });
   });
 
+
+
+
+  // describe('/api/game/:id/drawCard/:playerId', _ => {
+  //   before(async () => {
+  //     try{
+  //       await knex.migrate.rollback();
+  //       await knex.migrate.latest();
+  //       await knex.seed.run();
+  //     }catch(e){
+  //       console.log(e)
+  //     }
+  //   });
+  //   it('will draw a card for player', asyncHOF(async () => {
+  //     const gameId = 1;
+  //     const game = await queries.findGame({gameId: gameId});
+  //     const turnId = game[0].turn_id; //current turn
+  //     let hand = await queries.getHand({playerId: turnId})
+  //     const oldCardCount = hand.length;
+  //
+  //     const res = await chai.request(server)
+  //     .get(`/api/game/${gameId}/drawCard/${turnId}`)
+  //
+  //     hand = await queries.getHand({playerId: turnId});
+  //     const cardCount = hand.length;
+  //     cardCount.should.equal(oldCardCount + 1)
+  //     res.body.should.have.property('card');
+  //     res.should.have.status(200);
+  //
+  //   }));
+  //
+  // });
+  //
 
 
 })
