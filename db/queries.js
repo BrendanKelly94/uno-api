@@ -287,6 +287,7 @@ const getNextTurn = async({gameId, currentTurn, isSkip}) => {
     const game = await findGame({gameId: gameId});
     const players = await getPlayers({gameId: gameId});
     const currIndex = players.findIndex(player => player.id === currentTurn);
+
     let nextTurn;
     if(isSkip){
       if(game[0].direction){
@@ -294,6 +295,7 @@ const getNextTurn = async({gameId, currentTurn, isSkip}) => {
       }else{
         nextTurn = players[(currIndex - 2 + players.length) % players.length]
       }
+
     }else{
       if(game[0].direction){
         nextTurn = players[(currIndex + 1) % players.length];
@@ -301,7 +303,6 @@ const getNextTurn = async({gameId, currentTurn, isSkip}) => {
         nextTurn = players[(currIndex - 1 + players.length) % players.length]
       }
     }
-
     return nextTurn;
   }catch(e){
     throw new Error(e);

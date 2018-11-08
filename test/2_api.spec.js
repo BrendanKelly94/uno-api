@@ -448,15 +448,7 @@ describe('API Routes', _ => {
             return false;
           }
         });
-        const socket = io.connect(socketUrl, options);
-        socket.emit('join', {gameId: 2});
-        socket.on('newTurn', (data) => {
-          data.should.have.property('currTurn');
-          data.should.have.property('lastTurn');
-          data.should.have.property('card');
-          socket.disconnect();
-        });
-
+        
         const res = await chai.request(server)
         .post(`/api/game/${2}/submitCard/${4}`)
         .send({card: reg[0]})
